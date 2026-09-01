@@ -1,0 +1,13 @@
+{
+    "steady_state_grip_limit_g": 1.794,
+    "steady_state_grip_limit_ms2": 17.59,
+    "max_ay_g": 2.131,
+    "max_ay_ms2": 20.89,
+    "limit_balance_nm": -587.6,
+    "limit_balance_type": "Understeer",
+    "control_nm_per_deg": -533.99,
+    "stability_nm_per_deg": 1131.97,
+    "tlltd_front_percent": 45.8,
+    "roll_gradient_deg_per_g": 0.38,
+    "velocity_mph": 25.0
+}

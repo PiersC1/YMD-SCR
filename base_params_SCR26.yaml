@@ -1,0 +1,152 @@
+aero_params:
+  Cl: 4.29 # Spec Sheet 26
+  CoP: 45.37 # Spec Sheet 26
+  rho:
+    value: 0.0763
+    unit: 'lb/ft^3'
+  frontal_area:
+    value: 1.14 # Spec Sheet 26
+    unit: 'm^2'
+
+# VEHICLE MASS PARAMS
+mass:
+  x_loc: 0.49       # percent front
+  y_loc: 0.501       # percent left
+  z_loc: 
+    value: 12.5       # CG height 
+    unit: 'in'
+
+  dry_mass:
+    value: 490      
+    unit: 'lb'
+
+  driver_mass:
+    value: 150
+    unit: 'lb'
+  
+  fuel_mass:
+    value: 10
+    unit: 'lb'
+
+dimensions:
+  wheelbase:
+    value: 60.5 # Spec Sheet 26
+    unit: 'in'
+
+simulation_params:
+  YMD:
+    velocity:
+      value: 25
+      unit: 'mph'
+    sweeps:
+      slip_angle:
+        min: -15
+        max: 15
+        points: 15
+        unit: 'deg'
+      slip_ratio:
+        min: 0
+        max: 0
+        points: 1
+        unit: 'none'
+      steering_angle:
+        min: -20
+        max: 20
+        points: 20
+        unit: 'deg'
+
+# Front Suspension Paramters
+frontSuspension:
+
+  stiffness:
+    spring_rate: 
+      value: 300
+      unit: 'lb/in'
+    arb_stiffness:
+      value: 0 # 350 # I think 0 b/c we got rid of it.
+      unit: 'lb/in'
+
+  geom:
+    track_width:
+      value: 48 # Spec Sheet 26
+      unit: 'in'
+    static_IA:
+      value: 2 
+      unit: 'deg'
+    static_roll_center:
+      value: 2.72 # Spec Sheet 26
+      units: 'in'
+    static_toe:
+      value: -0.5
+      units: 'deg'
+
+  kinematics:
+    spring_MR: 1.08 
+    arb_MR: 0 # 0.35 # I think 0 b/c we got rid of it.
+
+  mass:
+    unsprung_mass: 
+      value: 10.8
+      unit: lbs
+    cg_height:
+      value: 8
+      unit: 'in'
+
+
+# Rear Suspension Parameters
+rearSuspension:
+
+  stiffness:
+    spring_rate: 
+      value: 250
+      unit: 'lb/in'
+    arb_stiffness:
+      value: 0
+      unit: 'lb/in'
+
+  geom:
+    track_width:
+      value: 48 # Spec Sheet 26
+      unit: 'in'
+    static_IA:
+      value: 0.5 
+      unit: 'deg'
+    static_roll_center:
+      value: 4.75 # Spec Sheet 26
+      units: 'in'
+    static_toe:
+      value: 0
+      units: 'deg'
+
+  kinematics:
+    spring_MR: 1.18 
+    arb_MR: 0
+  
+  mass:
+    unsprung_mass: 
+      value: 12.43
+      unit: lbs
+    cg_height:
+      value: 8
+      unit: 'in'
+
+# Steering
+
+steering:
+  ackermann:
+    value: 110 # Spec Sheet 26
+    unit: '%'
+
+
+# Tires
+tire_params:
+  inflation_pres:
+    value: 11
+    unit: 'psi'
+  tire_stiffness:
+    value: 450
+    unit: 'lb/in'
+
+tire_data:
+  mf_file_fy: 'Fitted Data/43075_R20_16x7.5_FY0.mat'
+  mf_file_mz: 'Fitted Data/43075_R20_16x7.5_MZ0.mat'

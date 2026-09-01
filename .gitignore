@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.DS_Store
+temp_uploaded_config.yaml
+outputs/*.png
+outputs/*.csv
