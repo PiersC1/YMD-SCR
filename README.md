@@ -2,14 +2,15 @@
 
 A modular, quasi-static vehicle dynamics simulation tool for Formula Student / Formula SAE race cars. This package computes steady-state cornering handling envelopes across a two-dimensional grid of chassis slip angles ($\beta$) and steering angles ($\delta$), evaluates key vehicle handling metrics (KPIs), and provides an interactive Streamlit dashboard for parameter exploration and sensitivity analysis.
 
+For a more narrative explanation of YMDs, see "How To YMD" In USC Racing Drive -> SCR27 -> Vehicle Dynamics -> Knowledge Transfer
 ---
 
 ## Features
 
-- **4-Corner Quasi-Static Load Transfer**:
-  - Sprung mass roll moment distribution determined by front/rear spring rates, anti-roll bars, and motion ratios.
+- **4-Corner Load Transfer**:
+  - Sprung mass roll moment distribution determined by front/rear spring rates and motion ratios.
   - Geometric unsprung weight transfer governed by independent front and rear roll center heights.
-  - Aerodynamic downforce and pitch moment distribution based on dynamic speed, frontal area, $C_l$, and Center of Pressure (CoP).
+  - Aerodynamic downforce and pitch moment distribution based on dynamic speed, frontal area, and Coefficient of Lift.
 - **Non-Linear Tire Model**:
   - Neural network Pacejka formulation trained on TTC tire test data (`NN_model/R20_tire_model.pth`).
   - Native SI interface converting loads ($F_z > 0\text{ N}$) and slip angles ($\text{rad}$) with vectorized batch evaluation.
