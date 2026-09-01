@@ -198,7 +198,11 @@ def main():
             temp_path = ROOT_DIR / "temp_uploaded_config.yaml"
             with open(temp_path, "wb") as f:
                 f.write(uploaded_file.getvalue())
-            active_config = load_config(temp_path)
+            try:
+                active_config = load_config(temp_path)
+            except Exception as e:
+                st.sidebar.error(f"⚠️ Failed to parse uploaded YAML: {e}")
+                active_config = copy.deepcopy(base_config)
         else:
             active_config = copy.deepcopy(base_config)
     else:

@@ -30,9 +30,10 @@ class TestConfig(unittest.TestCase):
         expected_wb_m = 60.5 * INCH_TO_M
         self.assertAlmostEqual(cfg.dimensions.wheelbase, expected_wb_m, places=3)
 
-        # 3. CG to front axle (a) and rear axle (b): x_loc = 0.49 front -> a = wb * 0.51, b = wb * 0.49
-        self.assertAlmostEqual(cfg.a, expected_wb_m * 0.51, places=3)
-        self.assertAlmostEqual(cfg.b, expected_wb_m * 0.49, places=3)
+        # 3. CG to front axle (a) and rear axle (b): a = wb * (1 - x_loc_front), b = wb * x_loc_front
+        x_f = cfg.mass.x_loc_front
+        self.assertAlmostEqual(cfg.a, expected_wb_m * (1.0 - x_f), places=3)
+        self.assertAlmostEqual(cfg.b, expected_wb_m * x_f, places=3)
 
         # 4. Track width: 48 in -> 1.2192 m
         expected_tw_m = 48.0 * INCH_TO_M
