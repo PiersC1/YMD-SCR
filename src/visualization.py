@@ -39,11 +39,15 @@ class YMDVisualizer:
         beta_deg = result.beta_grid_deg[:, 0]
         delta_deg = result.delta_grid_deg[0, :]
 
+        import matplotlib
+        matplotlib.rcParams["text.usetex"] = False
+        matplotlib.rcParams["mathtext.fontset"] = "dejavusans"
+
         fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
 
         # Background grid & axes
-        ax.axhline(0, color="gray", linestyle="--", linewidth=1.0, alpha=0.7)
-        ax.axvline(0, color="gray", linestyle="--", linewidth=1.0, alpha=0.7)
+        ax.axhline(0, color="#5C5C5C", linestyle="--", linewidth=1.0, alpha=0.6)
+        ax.axvline(0, color="#5C5C5C", linestyle="--", linewidth=1.0, alpha=0.6)
 
         # Colormaps for isolines
         cmap_delta = cm.get_cmap("coolwarm", len(delta_deg))
@@ -55,7 +59,7 @@ class YMDVisualizer:
             color = "#990000" if is_zero else cmap_beta(i)
             lw = 2.5 if is_zero else 1.2
             alpha = 1.0 if is_zero else 0.65
-            label = "β = 0°" if is_zero else None
+            label = "Beta = 0 deg" if is_zero else None
             ax.plot(
                 ay_g[i, :],
                 mz[i, :],
@@ -72,7 +76,7 @@ class YMDVisualizer:
             color = "#D4A017" if is_zero else cmap_delta(j)
             lw = 2.5 if is_zero else 1.0
             alpha = 1.0 if is_zero else 0.55
-            label = "δ = 0°" if is_zero else None
+            label = "Delta = 0 deg" if is_zero else None
             ax.plot(
                 ay_g[:, j],
                 mz[:, j],
@@ -105,7 +109,7 @@ class YMDVisualizer:
             zorder=6,
             edgecolors="#990000",
             linewidths=1.5,
-            label=f"Max Ay ({kpis.max_ay_g:.2f}g, Mz={kpis.limit_balance_nm:.0f} N*m)",
+            label=f"Max Ay ({kpis.max_ay_g:.2f}g, Mz={kpis.limit_balance_nm:.0f} Nm)",
         )
 
         # Formatting
@@ -115,8 +119,8 @@ class YMDVisualizer:
             else f"Yaw Moment Diagram @ {result.velocity_mph:.1f} mph ({result.velocity_ms:.1f} m/s)"
         )
         ax.set_title(chart_title, fontsize=14, fontweight="bold", pad=12, color="#990000")
-        ax.set_xlabel("Lateral Acceleration Ay [g]", fontsize=12, fontweight="medium")
-        ax.set_ylabel("Yaw Moment Mz [N*m]", fontsize=12, fontweight="medium")
+        ax.set_xlabel("Lateral Acceleration Ay (g)", fontsize=12, fontweight="medium")
+        ax.set_ylabel("Yaw Moment Mz (Nm)", fontsize=12, fontweight="medium")
         ax.grid(True, linestyle=":", alpha=0.6)
 
         # Add KPI Summary Box
@@ -124,9 +128,9 @@ class YMDVisualizer:
             f"--- Performance KPIs ---\n"
             f"Grip Limit (Mz=0): {kpis.steady_state_grip_limit_g:.2f} g\n"
             f"Max Lateral Accel: {kpis.max_ay_g:.2f} g\n"
-            f"Limit Balance: {kpis.limit_balance_nm:+.1f} N*m ({kpis.limit_balance_type})\n"
-            f"Control Authority: {kpis.control_nm_per_deg:+.1f} N*m/deg\n"
-            f"Yaw Stability: {kpis.stability_nm_per_deg:+.1f} N*m/deg\n"
+            f"Limit Balance: {kpis.limit_balance_nm:+.1f} Nm ({kpis.limit_balance_type})\n"
+            f"Control Authority: {kpis.control_nm_per_deg:+.1f} Nm/deg\n"
+            f"Yaw Stability: {kpis.stability_nm_per_deg:+.1f} Nm/deg\n"
             f"Front TLLTD: {kpis.tlltd_front_percent:.1f} %\n"
             f"Roll Gradient: {kpis.roll_gradient_deg_per_g:.2f} deg/g"
         )

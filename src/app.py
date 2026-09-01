@@ -161,12 +161,18 @@ def main():
     tire_model = get_tire_model()
     base_config = get_baseline_config()
 
+    if "reset_counter" not in st.session_state:
+        st.session_state["reset_counter"] = 0
+    rc = st.session_state["reset_counter"]
+
     # Sidebar: Vehicle Setup Controls
     st.sidebar.header("Vehicle Configuration")
 
     col_btn1, col_btn2 = st.sidebar.columns(2)
     if col_btn1.button("Reset Baseline", help="Reset all parameters back to default SCR26 values"):
-        st.session_state.clear()
+        st.session_state["reset_counter"] += 1
+        for k in ["active_result", "active_kpis", "active_config"]:
+            st.session_state.pop(k, None)
         st.rerun()
 
     auto_solve = st.sidebar.checkbox("Auto-Solve on Change", value=False, help="Automatically re-run solver on every slider change. Leave unchecked to adjust multiple parameters and solve on demand.")
@@ -177,10 +183,11 @@ def main():
         "Configuration Source",
         ["Default SCR26", "Upload Custom YAML"],
         index=0,
+        key=f"cfg_source_{rc}",
     )
 
     if config_source == "Upload Custom YAML":
-        uploaded_file = st.sidebar.file_uploader("Upload YAML Config", type=["yaml", "yml"])
+        uploaded_file = st.sidebar.file_uploader("Upload YAML Config", type=["yaml", "yml"], key=f"uploader_{rc}")
         if uploaded_file is not None:
             temp_path = ROOT_DIR / "temp_uploaded_config.yaml"
             with open(temp_path, "wb") as f:
@@ -199,18 +206,19 @@ def main():
             max_value=75.0,
             value=float(active_config.simulation.velocity_display),
             step=1.0,
+            key=f"speed_{rc}",
         )
         active_config.simulation.velocity = speed_mph * MPH_TO_MS
         active_config.simulation.velocity_display = speed_mph
 
         st.markdown("**Grid Resolution**")
-        b_min = st.number_input("Chassis Slip β Min (deg)", value=-15.0, step=1.0)
-        b_max = st.number_input("Chassis Slip β Max (deg)", value=15.0, step=1.0)
-        b_pts = st.number_input("Chassis Slip β Points", value=15, min_value=5, max_value=41, step=2)
+        b_min = st.number_input("Chassis Slip β Min (deg)", value=-15.0, step=1.0, key=f"b_min_{rc}")
+        b_max = st.number_input("Chassis Slip β Max (deg)", value=15.0, step=1.0, key=f"b_max_{rc}")
+        b_pts = st.number_input("Chassis Slip β Points", value=15, min_value=5, max_value=41, step=2, key=f"b_pts_{rc}")
 
-        d_min = st.number_input("Steer Angle δ Min (deg)", value=-20.0, step=1.0)
-        d_max = st.number_input("Steer Angle δ Max (deg)", value=20.0, step=1.0)
-        d_pts = st.number_input("Steer Angle δ Points", value=21, min_value=5, max_value=51, step=2)
+        d_min = st.number_input("Steer Angle δ Min (deg)", value=-20.0, step=1.0, key=f"d_min_{rc}")
+        d_max = st.number_input("Steer Angle δ Max (deg)", value=20.0, step=1.0, key=f"d_max_{rc}")
+        d_pts = st.number_input("Steer Angle δ Points", value=21, min_value=5, max_value=51, step=2, key=f"d_pts_{rc}")
 
         active_config.simulation.beta_sweep.min_val = b_min
         active_config.simulation.beta_sweep.max_val = b_max
@@ -220,15 +228,15 @@ def main():
         active_config.simulation.delta_sweep.max_val = d_max
         active_config.simulation.delta_sweep.points = int(d_pts)
 
-        damping = st.slider("Solver Damping Factor (λ)", min_value=0.1, max_value=0.9, value=0.35, step=0.05)
+        damping = st.slider("Solver Damping Factor (λ)", min_value=0.1, max_value=0.9, value=0.35, step=0.05, key=f"damping_{rc}")
         active_config.simulation.damping_factor = damping
 
     # 2. Mass, CG & Dimensions
     with st.sidebar.expander("Mass, CG & Dimensions", expanded=False):
         c_m1, c_m2 = st.columns(2)
-        dry_m_lb = c_m1.number_input("Dry Mass (lb)", value=float(active_config.mass.dry_mass * KG_TO_LB), step=5.0)
-        driver_m_lb = c_m2.number_input("Driver Mass (lb)", value=float(active_config.mass.driver_mass * KG_TO_LB), step=5.0)
-        fuel_m_lb = st.number_input("Fuel Mass (lb)", value=float(active_config.mass.fuel_mass * KG_TO_LB), step=1.0)
+        dry_m_lb = c_m1.number_input("Dry Mass (lb)", value=float(active_config.mass.dry_mass * KG_TO_LB), step=5.0, key=f"dry_m_{rc}")
+        driver_m_lb = c_m2.number_input("Driver Mass (lb)", value=float(active_config.mass.driver_mass * KG_TO_LB), step=5.0, key=f"driver_m_{rc}")
+        fuel_m_lb = st.number_input("Fuel Mass (lb)", value=float(active_config.mass.fuel_mass * KG_TO_LB), step=1.0, key=f"fuel_m_{rc}")
 
         total_m_kg = (dry_m_lb + driver_m_lb + fuel_m_lb) * LB_TO_KG
         active_config.mass.dry_mass = dry_m_lb * LB_TO_KG
@@ -238,24 +246,24 @@ def main():
 
         st.caption(f"Total Mass: **{total_m_kg * KG_TO_LB:.1f} lb** ({total_m_kg:.1f} kg)")
 
-        cg_pct_front = st.slider("Weight Dist (% Front)", min_value=30.0, max_value=70.0, value=float(active_config.mass.x_loc_front * 100.0), step=0.5)
+        cg_pct_front = st.slider("Weight Dist (% Front)", min_value=30.0, max_value=70.0, value=float(active_config.mass.x_loc_front * 100.0), step=0.5, key=f"cg_front_{rc}")
         active_config.mass.x_loc_front = cg_pct_front / 100.0
 
-        cg_pct_left = st.slider("Weight Dist (% Left)", min_value=40.0, max_value=60.0, value=float(active_config.mass.y_loc_left * 100.0), step=0.1)
+        cg_pct_left = st.slider("Weight Dist (% Left)", min_value=40.0, max_value=60.0, value=float(active_config.mass.y_loc_left * 100.0), step=0.1, key=f"cg_left_{rc}")
         active_config.mass.y_loc_left = cg_pct_left / 100.0
 
-        cg_h_in = st.number_input("CG Height (in)", value=float(active_config.mass.cg_height * M_TO_INCH), step=0.25)
+        cg_h_in = st.number_input("CG Height (in)", value=float(active_config.mass.cg_height * M_TO_INCH), step=0.25, key=f"cg_h_{rc}")
         active_config.mass.cg_height = cg_h_in * INCH_TO_M
 
-        wheelbase_in = st.number_input("Wheelbase (in)", value=float(active_config.dimensions.wheelbase * M_TO_INCH), step=0.5)
+        wheelbase_in = st.number_input("Wheelbase (in)", value=float(active_config.dimensions.wheelbase * M_TO_INCH), step=0.5, key=f"wb_{rc}")
         active_config.dimensions.wheelbase = wheelbase_in * INCH_TO_M
 
     # 3. Aerodynamics
     with st.sidebar.expander("Aerodynamics", expanded=False):
-        cl_val = st.number_input("Lift/Downforce Coeff (Cl)", value=float(active_config.aero.Cl), step=0.1)
-        cop_val = st.slider("Aero Balance (CoP % Front)", min_value=15.0, max_value=85.0, value=float(active_config.aero.CoP), step=0.5)
-        area_val = st.number_input("Frontal Area (m²)", value=float(active_config.aero.frontal_area), step=0.05)
-        rho_val = st.number_input("Air Density (kg/m³)", value=float(active_config.aero.rho), step=0.01)
+        cl_val = st.number_input("Lift/Downforce Coeff (Cl)", value=float(active_config.aero.Cl), step=0.1, key=f"cl_{rc}")
+        cop_val = st.slider("Aero Balance (CoP % Front)", min_value=15.0, max_value=85.0, value=float(active_config.aero.CoP), step=0.5, key=f"cop_{rc}")
+        area_val = st.number_input("Frontal Area (m²)", value=float(active_config.aero.frontal_area), step=0.05, key=f"area_{rc}")
+        rho_val = st.number_input("Air Density (kg/m³)", value=float(active_config.aero.rho), step=0.01, key=f"rho_{rc}")
 
         active_config.aero.Cl = cl_val
         active_config.aero.CoP = cop_val
@@ -264,16 +272,16 @@ def main():
 
     # 4. Front Suspension
     with st.sidebar.expander("Front Suspension & Geometry", expanded=False):
-        f_k_s = st.number_input("Front Spring Rate (lb/in)", value=float(active_config.front_suspension.spring_rate / LBF_PER_IN_TO_N_PER_M), step=25.0)
-        f_k_arb = st.number_input("Front ARB Stiffness (lb/in)", value=float(active_config.front_suspension.arb_stiffness / LBF_PER_IN_TO_N_PER_M), step=25.0)
-        f_tw = st.number_input("Front Track Width (in)", value=float(active_config.front_suspension.track_width * M_TO_INCH), step=0.5)
-        f_rc = st.number_input("Front Roll Center Height (in)", value=float(active_config.front_suspension.roll_center_height * M_TO_INCH), step=0.25)
-        f_smr = st.number_input("Front Spring Motion Ratio", value=float(active_config.front_suspension.spring_MR), step=0.05)
-        f_amr = st.number_input("Front ARB Motion Ratio", value=float(active_config.front_suspension.arb_MR), step=0.05)
-        f_camber = st.number_input("Front Static Camber (deg)", value=float(np.rad2deg(active_config.front_suspension.static_camber)), step=0.25)
-        f_toe = st.number_input("Front Static Toe (deg, - = out)", value=float(np.rad2deg(active_config.front_suspension.static_toe)), step=0.1)
-        f_umass = st.number_input("Front Corner Unsprung Mass (lb)", value=float(active_config.front_suspension.unsprung_mass * KG_TO_LB), step=1.0)
-        f_ucg = st.number_input("Front Unsprung CG Height (in)", value=float(active_config.front_suspension.unsprung_cg_height * M_TO_INCH), step=0.5)
+        f_k_s = st.number_input("Front Spring Rate (lb/in)", value=float(active_config.front_suspension.spring_rate / LBF_PER_IN_TO_N_PER_M), step=25.0, key=f"f_k_s_{rc}")
+        f_k_arb = st.number_input("Front ARB Stiffness (lb/in)", value=float(active_config.front_suspension.arb_stiffness / LBF_PER_IN_TO_N_PER_M), step=25.0, key=f"f_k_arb_{rc}")
+        f_tw = st.number_input("Front Track Width (in)", value=float(active_config.front_suspension.track_width * M_TO_INCH), step=0.5, key=f"f_tw_{rc}")
+        f_rc = st.number_input("Front Roll Center Height (in)", value=float(active_config.front_suspension.roll_center_height * M_TO_INCH), step=0.25, key=f"f_rc_{rc}")
+        f_smr = st.number_input("Front Spring Motion Ratio", value=float(active_config.front_suspension.spring_MR), step=0.05, key=f"f_smr_{rc}")
+        f_amr = st.number_input("Front ARB Motion Ratio", value=float(active_config.front_suspension.arb_MR), step=0.05, key=f"f_amr_{rc}")
+        f_camber = st.number_input("Front Static Camber (deg)", value=float(np.rad2deg(active_config.front_suspension.static_camber)), step=0.25, key=f"f_camber_{rc}")
+        f_toe = st.number_input("Front Static Toe (deg, - = out)", value=float(np.rad2deg(active_config.front_suspension.static_toe)), step=0.1, key=f"f_toe_{rc}")
+        f_umass = st.number_input("Front Corner Unsprung Mass (lb)", value=float(active_config.front_suspension.unsprung_mass * KG_TO_LB), step=1.0, key=f"f_umass_{rc}")
+        f_ucg = st.number_input("Front Unsprung CG Height (in)", value=float(active_config.front_suspension.unsprung_cg_height * M_TO_INCH), step=0.5, key=f"f_ucg_{rc}")
 
         active_config.front_suspension.spring_rate = f_k_s * LBF_PER_IN_TO_N_PER_M
         active_config.front_suspension.arb_stiffness = f_k_arb * LBF_PER_IN_TO_N_PER_M
@@ -288,16 +296,16 @@ def main():
 
     # 5. Rear Suspension
     with st.sidebar.expander("Rear Suspension & Geometry", expanded=False):
-        r_k_s = st.number_input("Rear Spring Rate (lb/in)", value=float(active_config.rear_suspension.spring_rate / LBF_PER_IN_TO_N_PER_M), step=25.0)
-        r_k_arb = st.number_input("Rear ARB Stiffness (lb/in)", value=float(active_config.rear_suspension.arb_stiffness / LBF_PER_IN_TO_N_PER_M), step=25.0)
-        r_tw = st.number_input("Rear Track Width (in)", value=float(active_config.rear_suspension.track_width * M_TO_INCH), step=0.5)
-        r_rc = st.number_input("Rear Roll Center Height (in)", value=float(active_config.rear_suspension.roll_center_height * M_TO_INCH), step=0.25)
-        r_smr = st.number_input("Rear Spring Motion Ratio", value=float(active_config.rear_suspension.spring_MR), step=0.05)
-        r_amr = st.number_input("Rear ARB Motion Ratio", value=float(active_config.rear_suspension.arb_MR), step=0.05)
-        r_camber = st.number_input("Rear Static Camber (deg)", value=float(np.rad2deg(active_config.rear_suspension.static_camber)), step=0.25)
-        r_toe = st.number_input("Rear Static Toe (deg, + = in)", value=float(np.rad2deg(active_config.rear_suspension.static_toe)), step=0.1)
-        r_umass = st.number_input("Rear Corner Unsprung Mass (lb)", value=float(active_config.rear_suspension.unsprung_mass * KG_TO_LB), step=1.0)
-        r_ucg = st.number_input("Rear Unsprung CG Height (in)", value=float(active_config.rear_suspension.unsprung_cg_height * M_TO_INCH), step=0.5)
+        r_k_s = st.number_input("Rear Spring Rate (lb/in)", value=float(active_config.rear_suspension.spring_rate / LBF_PER_IN_TO_N_PER_M), step=25.0, key=f"r_k_s_{rc}")
+        r_k_arb = st.number_input("Rear ARB Stiffness (lb/in)", value=float(active_config.rear_suspension.arb_stiffness / LBF_PER_IN_TO_N_PER_M), step=25.0, key=f"r_k_arb_{rc}")
+        r_tw = st.number_input("Rear Track Width (in)", value=float(active_config.rear_suspension.track_width * M_TO_INCH), step=0.5, key=f"r_tw_{rc}")
+        r_rc = st.number_input("Rear Roll Center Height (in)", value=float(active_config.rear_suspension.roll_center_height * M_TO_INCH), step=0.25, key=f"r_rc_{rc}")
+        r_smr = st.number_input("Rear Spring Motion Ratio", value=float(active_config.rear_suspension.spring_MR), step=0.05, key=f"r_smr_{rc}")
+        r_amr = st.number_input("Rear ARB Motion Ratio", value=float(active_config.rear_suspension.arb_MR), step=0.05, key=f"r_amr_{rc}")
+        r_camber = st.number_input("Rear Static Camber (deg)", value=float(np.rad2deg(active_config.rear_suspension.static_camber)), step=0.25, key=f"r_camber_{rc}")
+        r_toe = st.number_input("Rear Static Toe (deg, + = in)", value=float(np.rad2deg(active_config.rear_suspension.static_toe)), step=0.1, key=f"r_toe_{rc}")
+        r_umass = st.number_input("Rear Corner Unsprung Mass (lb)", value=float(active_config.rear_suspension.unsprung_mass * KG_TO_LB), step=1.0, key=f"r_umass_{rc}")
+        r_ucg = st.number_input("Rear Unsprung CG Height (in)", value=float(active_config.rear_suspension.unsprung_cg_height * M_TO_INCH), step=0.5, key=f"r_ucg_{rc}")
 
         active_config.rear_suspension.spring_rate = r_k_s * LBF_PER_IN_TO_N_PER_M
         active_config.rear_suspension.arb_stiffness = r_k_arb * LBF_PER_IN_TO_N_PER_M
@@ -312,10 +320,10 @@ def main():
 
     # 6. Steering & Tires
     with st.sidebar.expander("Steering & Tires", expanded=False):
-        ack_pct = st.slider("Ackermann Steering (%)", min_value=0.0, max_value=150.0, value=float(active_config.steering.ackermann_percent), step=5.0)
-        tire_p_psi = st.number_input("Tire Inflation Pressure (psi)", value=float(active_config.tire.inflation_pressure / PSI_TO_PA), step=0.5)
-        tire_k_lbin = st.number_input("Tire Radial Stiffness (lb/in)", value=float(active_config.tire.tire_stiffness / LBF_PER_IN_TO_N_PER_M), step=25.0)
-        tire_scale = st.slider("Tire Grip Multiplier / Scale", min_value=0.70, max_value=1.30, value=0.93, step=0.01)
+        ack_pct = st.slider("Ackermann Steering (%)", min_value=0.0, max_value=150.0, value=float(active_config.steering.ackermann_percent), step=5.0, key=f"ack_{rc}")
+        tire_p_psi = st.number_input("Tire Inflation Pressure (psi)", value=float(active_config.tire.inflation_pressure / PSI_TO_PA), step=0.5, key=f"tire_p_{rc}")
+        tire_k_lbin = st.number_input("Tire Radial Stiffness (lb/in)", value=float(active_config.tire.tire_stiffness / LBF_PER_IN_TO_N_PER_M), step=25.0, key=f"tire_k_{rc}")
+        tire_scale = st.slider("Tire Grip Multiplier / Scale", min_value=0.70, max_value=1.30, value=0.93, step=0.01, key=f"tire_scale_{rc}")
 
         active_config.steering.ackermann_percent = ack_pct
         active_config.tire.inflation_pressure = tire_p_psi * PSI_TO_PA
@@ -363,7 +371,12 @@ def main():
         enable_comp = st.checkbox("Overlay Default Baseline Setup", value=False)
         comp_res = None
         if enable_comp:
-            base_solver = YMDSolver(base_config, tire_model=tire_model)
+            comp_cfg = copy.deepcopy(base_config)
+            comp_cfg.simulation.velocity = active_config.simulation.velocity
+            comp_cfg.simulation.velocity_display = active_config.simulation.velocity_display
+            comp_cfg.simulation.beta_sweep = copy.deepcopy(active_config.simulation.beta_sweep)
+            comp_cfg.simulation.delta_sweep = copy.deepcopy(active_config.simulation.delta_sweep)
+            base_solver = YMDSolver(comp_cfg, tire_model=tire_model)
             comp_res = base_solver.solve_grid()
 
         # Plotly YMD Figure
@@ -377,7 +390,7 @@ def main():
         st.plotly_chart(plotly_fig, width="stretch")
 
         # Detailed state inspector
-        with st.expander("🔍 Inspect Operating Points & 4-Corner Tire States"):
+        with st.expander("Inspect Operating Points & 4-Corner Tire States"):
             beta_choices = result.beta_grid_deg[:, 0]
             delta_choices = result.delta_grid_deg[0, :]
 
@@ -385,8 +398,8 @@ def main():
             sel_beta = sel_c1.selectbox("Select Body Slip Angle β (deg)", beta_choices, index=len(beta_choices)//2)
             sel_delta = sel_c2.selectbox("Select Steer Angle δ (deg)", delta_choices, index=len(delta_choices)//2)
 
-            b_idx = int(np.where(np.isclose(beta_choices, sel_beta))[0][0])
-            d_idx = int(np.where(np.isclose(delta_choices, sel_delta))[0][0])
+            b_idx = int(np.argmin(np.abs(beta_choices - sel_beta)))
+            d_idx = int(np.argmin(np.abs(delta_choices - sel_delta)))
             sol_pt = result.point_solutions[b_idx][d_idx]
 
             st.write(f"**Operating State**: Ay = `{sol_pt.ay_g:.3f} g` (`{sol_pt.ay:.2f} m/s²`), Yaw Moment Mz = `{sol_pt.mz:.1f} N*m`, Yaw Rate = `{sol_pt.yaw_rate:.2f} rad/s`")
@@ -406,7 +419,7 @@ def main():
             st.dataframe(corner_df, width="stretch")
 
     with tab_sweep:
-        st.subheader("📈 1D & 2D Parameter Sensitivity Analysis")
+        st.subheader("1D Parameter Sensitivity Analysis")
         sweep_var = st.selectbox(
             "Select Parameter to Sweep",
             [
@@ -431,7 +444,7 @@ def main():
             sw_max = sweep_cols[1].number_input("Max Speed (mph)", value=55.0)
             sw_pts = sweep_cols[2].number_input("Points", value=9, min_value=3, max_value=25)
             sw_vals = np.linspace(sw_min, sw_max, int(sw_pts))
-            sweep_func = lambda cfg, val: setattr(cfg.simulation, "velocity", val * MPH_TO_MS)
+            sweep_func = lambda cfg, val: (setattr(cfg.simulation, "velocity", val * MPH_TO_MS), setattr(cfg.simulation, "velocity_display", val))
         elif sweep_var == "Front Spring Rate (lb/in)":
             sw_min = sweep_cols[0].number_input("Min Front Spring (lb/in)", value=150.0)
             sw_max = sweep_cols[1].number_input("Max Front Spring (lb/in)", value=600.0)
@@ -499,9 +512,12 @@ def main():
             sw_vals = np.linspace(sw_min, sw_max, int(sw_pts))
             sweep_func = lambda cfg, val: setattr(cfg.steering, "ackermann_percent", val)
 
-        if st.button("🚀 Run Sensitivity Sweep"):
+        run_sweep_btn = st.button("Run Sensitivity Sweep", type="primary")
+
+        if run_sweep_btn:
             with st.spinner("Solving parameter sweep across full YMD envelopes..."):
-                sw_res = solver.run_1d_sweep(sweep_func, sw_vals, param_name=sweep_var)
+                sw_solver = YMDSolver(active_config, tire_model=tire_model)
+                sw_res = sw_solver.run_1d_sweep(sweep_func, sw_vals, param_name=sweep_var)
 
                 sw_df = pd.DataFrame({
                     sweep_var: sw_vals,
@@ -512,44 +528,50 @@ def main():
                     "Yaw Stability [N*m/deg]": [k.stability_nm_per_deg for k in sw_res.kpis],
                     "Front TLLTD [%]": [k.tlltd_front_percent for k in sw_res.kpis],
                 })
+                st.session_state["last_sweep_df"] = sw_df
+                st.session_state["last_sweep_var"] = sweep_var
 
-                st.markdown("#### Performance Trends")
+        if "last_sweep_df" in st.session_state and "last_sweep_var" in st.session_state:
+            saved_df = st.session_state["last_sweep_df"]
+            saved_var = st.session_state["last_sweep_var"]
 
-                # Dedicated columns for organized trend charts
-                tr_c1, tr_c2 = st.columns(2)
+            st.dataframe(saved_df, width="stretch")
 
-                with tr_c1:
-                    st.markdown("**Grip & Peak Lateral Acceleration [g]**")
-                    st.line_chart(sw_df.set_index(sweep_var)[["Grip Limit [g]", "Max Lateral Accel [g]"]])
+            st.markdown("#### Performance Trends")
 
-                    st.markdown("**Steering Control & Yaw Stability [N*m/deg]**")
-                    st.line_chart(sw_df.set_index(sweep_var)[["Control Authority [N*m/deg]", "Yaw Stability [N*m/deg]"]])
+            tr_c1, tr_c2 = st.columns(2)
 
-                with tr_c2:
-                    st.markdown("**Limit Balance [N*m] (Understeer < 0 < Oversteer)**")
-                    # Dedicated Limit Balance Plotly chart with neutral zero-line
-                    import plotly.graph_objects as go
-                    fig_lb = go.Figure()
-                    fig_lb.add_trace(go.Scatter(
-                        x=sw_df[sweep_var],
-                        y=sw_df["Limit Balance [N*m]"],
-                        mode="lines+markers",
-                        name="Limit Balance",
-                        line=dict(color="#990000", width=3),
-                        marker=dict(size=8, color="#FFCC00", line=dict(color="#990000", width=1.5)),
-                    ))
-                    fig_lb.add_hline(y=0, line_dash="dash", line_color="#5C5C5C", annotation_text="Neutral Balance (0 N*m)", annotation_position="bottom right")
-                    fig_lb.update_layout(
-                        xaxis_title=sweep_var,
-                        yaxis_title="Limit Balance Mz [N*m]",
-                        height=280,
-                        margin=dict(l=40, r=20, t=20, b=40),
-                        template="plotly_white",
-                    )
-                    st.plotly_chart(fig_lb, width="stretch")
+            with tr_c1:
+                st.markdown("**Grip & Peak Lateral Acceleration [g]**")
+                st.line_chart(saved_df.set_index(saved_var)[["Grip Limit [g]", "Max Lateral Accel [g]"]])
 
-                    st.markdown("**Front Lateral Load Transfer (TLLTD) [%]**")
-                    st.line_chart(sw_df.set_index(sweep_var)[["Front TLLTD [%]"]])
+                st.markdown("**Steering Control & Yaw Stability [N*m/deg]**")
+                st.line_chart(saved_df.set_index(saved_var)[["Control Authority [N*m/deg]", "Yaw Stability [N*m/deg]"]])
+
+            with tr_c2:
+                st.markdown("**Limit Balance [N*m] (Understeer < 0 < Oversteer)**")
+                import plotly.graph_objects as go
+                fig_lb = go.Figure()
+                fig_lb.add_trace(go.Scatter(
+                    x=saved_df[saved_var],
+                    y=saved_df["Limit Balance [N*m]"],
+                    mode="lines+markers",
+                    name="Limit Balance",
+                    line=dict(color="#990000", width=3),
+                    marker=dict(size=8, color="#FFCC00", line=dict(color="#990000", width=1.5)),
+                ))
+                fig_lb.add_hline(y=0, line_dash="dash", line_color="#5C5C5C", annotation_text="Neutral Balance (0 N*m)", annotation_position="bottom right")
+                fig_lb.update_layout(
+                    xaxis_title=saved_var,
+                    yaxis_title="Limit Balance Mz [N*m]",
+                    height=280,
+                    margin=dict(l=40, r=20, t=20, b=40),
+                    template="plotly_white",
+                )
+                st.plotly_chart(fig_lb, width="stretch")
+
+                st.markdown("**Front Lateral Load Transfer (TLLTD) [%]**")
+                st.line_chart(saved_df.set_index(saved_var)[["Front TLLTD [%]"]])
 
     with tab_export:
         st.subheader("Export Visualizations, Data & Custom YAML Config")
@@ -558,22 +580,26 @@ def main():
 
         with col_ex1:
             st.markdown("#### Export Plots & Grid Data")
-            # Matplotlib PNG generator with safe buffer handling
-            try:
-                fig_mpl = YMDVisualizer.plot_matplotlib(result, kpis=kpis)
-                img_buffer = io.BytesIO()
-                fig_mpl.savefig(img_buffer, format="png", dpi=300, bbox_inches="tight")
-                img_buffer.seek(0)
-                plt.close(fig_mpl)
+            # Matplotlib PNG on-demand generation
+            if st.button("Generate Publication Plot (300 DPI PNG)"):
+                with st.spinner("Rendering high-res 300 DPI diagram..."):
+                    try:
+                        fig_mpl = YMDVisualizer.plot_matplotlib(result, kpis=kpis)
+                        img_buffer = io.BytesIO()
+                        fig_mpl.savefig(img_buffer, format="png", dpi=300, bbox_inches="tight")
+                        img_buffer.seek(0)
+                        plt.close(fig_mpl)
+                        st.session_state["saved_png_bytes"] = img_buffer.getvalue()
+                    except Exception as e:
+                        st.warning(f"Matplotlib export unavailable: {e}")
 
+            if "saved_png_bytes" in st.session_state:
                 st.download_button(
-                    label="Download Publication Plot (300 DPI PNG)",
-                    data=img_buffer,
+                    label="Download Generated PNG",
+                    data=st.session_state["saved_png_bytes"],
                     file_name=f"YMD_plot_{speed_mph:.0f}mph.png",
                     mime="image/png",
                 )
-            except Exception as e:
-                st.warning(f"Matplotlib export unavailable: {e}")
 
             # CSV Data Export
             flat_data = []
