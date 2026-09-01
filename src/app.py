@@ -50,80 +50,89 @@ st.set_page_config(
 
 # USC Brand CSS Facelift (USC Cardinal: #990000, USC Gold: #FFCC00, Dark Gray: #5C5C5C, Light Gray: #C7C7C7)
 st.markdown(
-    """
-    <style>
-        .usc-header-container {
-            border-left: 6px solid #990000;
-            padding-left: 14px;
-            margin-bottom: 22px;
-        }
-        .usc-title {
-            font-size: 2.2rem;
-            font-weight: 800;
-            color: #990000;
-            margin: 0;
-            letter-spacing: -0.5px;
-            display: inline-block;
-        }
-        .usc-badge {
-            background-color: #FFCC00;
-            color: #990000;
-            font-weight: 700;
-            padding: 3px 10px;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            margin-left: 12px;
-            vertical-align: middle;
-            display: inline-block;
-        }
-        .usc-subtitle {
-            font-size: 0.95rem;
-            color: #5C5C5C;
-            margin-top: 4px;
-            font-weight: 500;
-        }
-        /* Custom Primary Button */
-        div.stButton > button[kind="primary"] {
-            background-color: #990000 !important;
-            color: #FFFFFF !important;
-            border: 1.5px solid #FFCC00 !important;
-            font-weight: 600 !important;
-            border-radius: 6px !important;
-        }
-        div.stButton > button[kind="primary"]:hover {
-            background-color: #800000 !important;
-            color: #FFCC00 !important;
-            border: 1.5px solid #FFCC00 !important;
-        }
-        /* Metric cards */
-        [data-testid="stMetric"] {
-            background-color: #FFFFFF;
-            border: 1px solid #C7C7C7;
-            border-top: 4px solid #990000;
-            padding: 10px 14px;
-            border-radius: 6px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-        }
-        [data-testid="stMetricLabel"] {
-            color: #5C5C5C !important;
-            font-weight: 600 !important;
-            font-size: 0.85rem !important;
-        }
-        [data-testid="stMetricValue"] {
-            color: #111111 !important;
-            font-weight: 700 !important;
-        }
-        /* Tabs */
-        button[data-baseweb="tab"] {
-            font-weight: 600 !important;
-            color: #5C5C5C !important;
-        }
-        button[data-baseweb="tab"][aria-selected="true"] {
-            color: #990000 !important;
-            border-bottom-color: #990000 !important;
-        }
-    </style>
-    """,
+    """<style>
+.usc-header-container {
+    border-left: 6px solid #990000;
+    padding: 2px 0 2px 14px;
+    margin-bottom: 20px;
+}
+.usc-title {
+    font-size: 2.1rem;
+    font-weight: 800;
+    color: #990000;
+    margin: 0;
+    letter-spacing: -0.5px;
+    display: inline-block;
+}
+.usc-badge {
+    background-color: #FFCC00;
+    color: #990000;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    margin-left: 10px;
+    vertical-align: middle;
+    display: inline-block;
+}
+.usc-subtitle {
+    font-size: 0.95rem;
+    color: #5C5C5C;
+    margin-top: 4px;
+    font-weight: 500;
+}
+/* Custom Primary Button */
+div.stButton > button[kind="primary"] {
+    background-color: #990000 !important;
+    color: #FFFFFF !important;
+    border: 1.5px solid #FFCC00 !important;
+    font-weight: 600 !important;
+    border-radius: 6px !important;
+}
+div.stButton > button[kind="primary"]:hover {
+    background-color: #800000 !important;
+    color: #FFCC00 !important;
+    border: 1.5px solid #FFCC00 !important;
+}
+/* Metric cards with anti-truncation styling */
+[data-testid="stMetric"] {
+    background-color: #FFFFFF;
+    border: 1px solid #E0E0E0;
+    border-top: 3.5px solid #990000;
+    padding: 8px 10px !important;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    min-width: 0 !important;
+}
+[data-testid="stMetricLabel"] {
+    color: #5C5C5C !important;
+    font-weight: 600 !important;
+    font-size: 0.78rem !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    line-height: 1.2 !important;
+}
+[data-testid="stMetricValue"], [data-testid="stMetricValue"] * {
+    color: #111111 !important;
+    font-weight: 700 !important;
+    font-size: 1.30rem !important;
+    white-space: normal !important;
+    overflow: visible !important;
+}
+[data-testid="stMetricDelta"], [data-testid="stMetricDelta"] * {
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+}
+/* Tabs */
+button[data-baseweb="tab"] {
+    font-weight: 600 !important;
+    color: #5C5C5C !important;
+}
+button[data-baseweb="tab"][aria-selected="true"] {
+    color: #990000 !important;
+    border-bottom-color: #990000 !important;
+}
+</style>""",
     unsafe_allow_html=True,
 )
 
@@ -136,25 +145,22 @@ def get_tire_model():
     return load_nn_tire_model(weights_path=str(weights), norm_params_path=str(norm))
 
 
-@st.cache_data
 def get_baseline_config():
-    """Load default vehicle configuration."""
+    """Load default vehicle configuration fresh from disk without stale memory caching."""
     cfg_path = ROOT_DIR / "base_params_SCR26.yaml"
     return load_config(cfg_path)
 
 
 def main():
-    # USC Branded Clean Header
+    # USC Branded Clean Header (unindented to prevent markdown code block parsing)
     st.markdown(
-        """
-        <div class="usc-header-container">
-            <div>
-                <span class="usc-title">YMD Solver</span>
-                <span class="usc-badge">SC RACING</span>
-            </div>
-            <div class="usc-subtitle">Steady-State Vehicle Dynamics & Handling Envelope</div>
-        </div>
-        """,
+        """<div class="usc-header-container">
+    <div>
+        <span class="usc-title">YMD Solver</span>
+        <span class="usc-badge">SC RACING</span>
+    </div>
+    <div class="usc-subtitle">Steady-State Vehicle Dynamics & Handling Envelope</div>
+</div>""",
         unsafe_allow_html=True,
     )
 
