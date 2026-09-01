@@ -45,6 +45,13 @@ class YMDResult:
     point_solutions: List[List[PointSolution]]
     velocity_ms: float
     velocity_mph: float
+    # High-resolution zero-angle isoline data for precise curves & KPI extraction
+    beta0_hires_delta_deg: Optional[np.ndarray] = None
+    beta0_hires_ay_g: Optional[np.ndarray] = None
+    beta0_hires_mz: Optional[np.ndarray] = None
+    delta0_hires_beta_deg: Optional[np.ndarray] = None
+    delta0_hires_ay_g: Optional[np.ndarray] = None
+    delta0_hires_mz: Optional[np.ndarray] = None
 
 
 @dataclass
@@ -288,6 +295,36 @@ class YMDSolver:
                 ay_guess = sol.ay
             solutions.append(row_sol)
 
+        # High-resolution 1D sweeps for Beta=0 (varying Delta) and Delta=0 (varying Beta)
+        d_min_rad = delta_vals.min()
+        d_max_rad = delta_vals.max()
+        b_min_rad = beta_vals.min()
+        b_max_rad = beta_vals.max()
+
+        hires_points = 81
+
+        # 1. Beta = 0.0 sweep (varying Delta)
+        d_hires = np.linspace(d_min_rad, d_max_rad, hires_points)
+        b0_ay_g = np.zeros(hires_points)
+        b0_mz = np.zeros(hires_points)
+        ay_guess = 0.0
+        for k, d_val in enumerate(d_hires):
+            sol = self.solve_point(beta=0.0, delta=d_val, velocity=v, initial_ay_guess=ay_guess)
+            b0_ay_g[k] = sol.ay_g
+            b0_mz[k] = sol.mz
+            ay_guess = sol.ay
+
+        # 2. Delta = 0.0 sweep (varying Beta)
+        b_hires = np.linspace(b_min_rad, b_max_rad, hires_points)
+        d0_ay_g = np.zeros(hires_points)
+        d0_mz = np.zeros(hires_points)
+        ay_guess = 0.0
+        for k, b_val in enumerate(b_hires):
+            sol = self.solve_point(beta=b_val, delta=0.0, velocity=v, initial_ay_guess=ay_guess)
+            d0_ay_g[k] = sol.ay_g
+            d0_mz[k] = sol.mz
+            ay_guess = sol.ay
+
         return YMDResult(
             config=self.config,
             beta_grid_rad=beta_grid,
@@ -302,6 +339,12 @@ class YMDSolver:
             point_solutions=solutions,
             velocity_ms=v,
             velocity_mph=v * 2.23694,
+            beta0_hires_delta_deg=d_hires * RAD_TO_DEG,
+            beta0_hires_ay_g=b0_ay_g,
+            beta0_hires_mz=b0_mz,
+            delta0_hires_beta_deg=b_hires * RAD_TO_DEG,
+            delta0_hires_ay_g=d0_ay_g,
+            delta0_hires_mz=d0_mz,
         )
 
     def run_1d_sweep(

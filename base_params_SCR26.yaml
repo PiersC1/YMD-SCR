@@ -10,8 +10,8 @@ aero_params:
 
 # VEHICLE MASS PARAMS
 mass:
-  x_loc: 0.49       # percent front
-  y_loc: 0.501       # percent left
+  x_loc: 0.50       # percent front
+  y_loc: 0.50       # percent left
   z_loc: 
     value: 12.5       # CG height 
     unit: 'in'

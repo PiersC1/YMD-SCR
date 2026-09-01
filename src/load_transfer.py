@@ -142,11 +142,29 @@ class LoadTransferModel:
         # 3. Aero downforce
         fz_aero_f, fz_aero_r, total_aero = self.compute_aero_loads(velocity)
 
-        # 4. Instantaneous normal load per corner
-        fz_fl = max(0.0, self.fz_static_fl + (fz_aero_f / 2.0) - delta_fz_f)
-        fz_fr = max(0.0, self.fz_static_fr + (fz_aero_f / 2.0) + delta_fz_f)
-        fz_rl = max(0.0, self.fz_static_rl + (fz_aero_r / 2.0) - delta_fz_r)
-        fz_rr = max(0.0, self.fz_static_rr + (fz_aero_r / 2.0) + delta_fz_r)
+        # 4. Instantaneous normal load per corner with strict axle load conservation
+        fz_tot_front = self.fz_static_front + fz_aero_f
+        fz_tot_rear = self.fz_static_rear + fz_aero_r
+
+        # Front axle loads
+        fz_fl = self.fz_static_fl + (fz_aero_f / 2.0) - delta_fz_f
+        fz_fr = self.fz_static_fr + (fz_aero_f / 2.0) + delta_fz_f
+        if fz_fl <= 0.0:
+            fz_fl = 0.0
+            fz_fr = fz_tot_front
+        elif fz_fr <= 0.0:
+            fz_fr = 0.0
+            fz_fl = fz_tot_front
+
+        # Rear axle loads
+        fz_rl = self.fz_static_rl + (fz_aero_r / 2.0) - delta_fz_r
+        fz_rr = self.fz_static_rr + (fz_aero_r / 2.0) + delta_fz_r
+        if fz_rl <= 0.0:
+            fz_rl = 0.0
+            fz_rr = fz_tot_rear
+        elif fz_rr <= 0.0:
+            fz_rr = 0.0
+            fz_rl = fz_tot_rear
 
         corner_loads = CornerLoads(
             FL=fz_fl,

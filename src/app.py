@@ -418,99 +418,177 @@ def main():
             })
             st.dataframe(corner_df, width="stretch")
 
+    SWEEP_SPECS = {
+        # Operating & Solver
+        "Vehicle Speed (mph)": {
+            "category": "Operating", "min": 15.0, "max": 60.0, "pts": 10, "key": "sw_speed",
+            "setter": lambda cfg, val: (setattr(cfg.simulation, "velocity", val * MPH_TO_MS), setattr(cfg.simulation, "velocity_display", val))
+        },
+        "Solver Damping Factor (λ)": {
+            "category": "Operating", "min": 0.15, "max": 0.75, "pts": 7, "key": "sw_damping",
+            "setter": lambda cfg, val: setattr(cfg.simulation, "damping_factor", val)
+        },
+        # Mass & CG
+        "Weight Distribution (% Front)": {
+            "category": "Mass & CG", "min": 40.0, "max": 60.0, "pts": 9, "key": "sw_wdf",
+            "setter": lambda cfg, val: setattr(cfg.mass, "x_loc_front", val / 100.0)
+        },
+        "Weight Distribution (% Left)": {
+            "category": "Mass & CG", "min": 45.0, "max": 55.0, "pts": 7, "key": "sw_wdl",
+            "setter": lambda cfg, val: setattr(cfg.mass, "y_loc_left", val / 100.0)
+        },
+        "CG Height (in)": {
+            "category": "Mass & CG", "min": 9.0, "max": 16.0, "pts": 8, "key": "sw_cgh",
+            "setter": lambda cfg, val: setattr(cfg.mass, "cg_height", val * INCH_TO_M)
+        },
+        "Dry Mass (lb)": {
+            "category": "Mass & CG", "min": 400.0, "max": 600.0, "pts": 9, "key": "sw_dry_m",
+            "setter": lambda cfg, val: (setattr(cfg.mass, "dry_mass", val * LB_TO_KG), setattr(cfg.mass, "total_mass", val * LB_TO_KG + cfg.mass.driver_mass + cfg.mass.fuel_mass))
+        },
+        "Driver Mass (lb)": {
+            "category": "Mass & CG", "min": 120.0, "max": 220.0, "pts": 6, "key": "sw_driver_m",
+            "setter": lambda cfg, val: (setattr(cfg.mass, "driver_mass", val * LB_TO_KG), setattr(cfg.mass, "total_mass", cfg.mass.dry_mass + val * LB_TO_KG + cfg.mass.fuel_mass))
+        },
+        "Wheelbase (in)": {
+            "category": "Mass & CG", "min": 55.0, "max": 66.0, "pts": 8, "key": "sw_wb",
+            "setter": lambda cfg, val: setattr(cfg.dimensions, "wheelbase", val * INCH_TO_M)
+        },
+        # Aerodynamics
+        "Aero Downforce (Cl)": {
+            "category": "Aerodynamics", "min": 1.0, "max": 5.5, "pts": 9, "key": "sw_cl",
+            "setter": lambda cfg, val: setattr(cfg.aero, "Cl", val)
+        },
+        "Aero Balance (CoP % Front)": {
+            "category": "Aerodynamics", "min": 25.0, "max": 65.0, "pts": 9, "key": "sw_cop",
+            "setter": lambda cfg, val: setattr(cfg.aero, "CoP", val)
+        },
+        "Frontal Area (m²)": {
+            "category": "Aerodynamics", "min": 0.8, "max": 1.6, "pts": 9, "key": "sw_area",
+            "setter": lambda cfg, val: setattr(cfg.aero, "frontal_area", val)
+        },
+        "Air Density (kg/m³)": {
+            "category": "Aerodynamics", "min": 1.05, "max": 1.30, "pts": 6, "key": "sw_rho",
+            "setter": lambda cfg, val: setattr(cfg.aero, "rho", val)
+        },
+        # Front Suspension
+        "Front Spring Rate (lb/in)": {
+            "category": "Front Suspension", "min": 150.0, "max": 600.0, "pts": 9, "key": "sw_fspring",
+            "setter": lambda cfg, val: setattr(cfg.front_suspension, "spring_rate", val * LBF_PER_IN_TO_N_PER_M)
+        },
+        "Front ARB Stiffness (lb/in)": {
+            "category": "Front Suspension", "min": 0.0, "max": 400.0, "pts": 9, "key": "sw_farb",
+            "setter": lambda cfg, val: setattr(cfg.front_suspension, "arb_stiffness", val * LBF_PER_IN_TO_N_PER_M)
+        },
+        "Front Roll Center Height (in)": {
+            "category": "Front Suspension", "min": 0.5, "max": 6.0, "pts": 8, "key": "sw_frc",
+            "setter": lambda cfg, val: setattr(cfg.front_suspension, "roll_center_height", val * INCH_TO_M)
+        },
+        "Front Track Width (in)": {
+            "category": "Front Suspension", "min": 42.0, "max": 54.0, "pts": 7, "key": "sw_ftw",
+            "setter": lambda cfg, val: setattr(cfg.front_suspension, "track_width", val * INCH_TO_M)
+        },
+        "Front Static Camber (deg)": {
+            "category": "Front Suspension", "min": -4.0, "max": 1.0, "pts": 9, "key": "sw_fcamber",
+            "setter": lambda cfg, val: setattr(cfg.front_suspension, "static_camber", np.deg2rad(val))
+        },
+        "Front Static Toe (deg)": {
+            "category": "Front Suspension", "min": -2.0, "max": 2.0, "pts": 9, "key": "sw_ftoe",
+            "setter": lambda cfg, val: setattr(cfg.front_suspension, "static_toe", np.deg2rad(val))
+        },
+        "Front Spring Motion Ratio": {
+            "category": "Front Suspension", "min": 0.70, "max": 1.40, "pts": 8, "key": "sw_fsmr",
+            "setter": lambda cfg, val: setattr(cfg.front_suspension, "spring_MR", val)
+        },
+        "Front ARB Motion Ratio": {
+            "category": "Front Suspension", "min": 0.0, "max": 1.30, "pts": 7, "key": "sw_famr",
+            "setter": lambda cfg, val: setattr(cfg.front_suspension, "arb_MR", val)
+        },
+        "Front Unsprung Mass (lb)": {
+            "category": "Front Suspension", "min": 6.0, "max": 18.0, "pts": 7, "key": "sw_fumass",
+            "setter": lambda cfg, val: setattr(cfg.front_suspension, "unsprung_mass", val * LB_TO_KG)
+        },
+        "Front Unsprung CG Height (in)": {
+            "category": "Front Suspension", "min": 5.0, "max": 12.0, "pts": 8, "key": "sw_fucg",
+            "setter": lambda cfg, val: setattr(cfg.front_suspension, "unsprung_cg_height", val * INCH_TO_M)
+        },
+        # Rear Suspension
+        "Rear Spring Rate (lb/in)": {
+            "category": "Rear Suspension", "min": 150.0, "max": 600.0, "pts": 9, "key": "sw_rspring",
+            "setter": lambda cfg, val: setattr(cfg.rear_suspension, "spring_rate", val * LBF_PER_IN_TO_N_PER_M)
+        },
+        "Rear ARB Stiffness (lb/in)": {
+            "category": "Rear Suspension", "min": 0.0, "max": 400.0, "pts": 9, "key": "sw_rarb",
+            "setter": lambda cfg, val: setattr(cfg.rear_suspension, "arb_stiffness", val * LBF_PER_IN_TO_N_PER_M)
+        },
+        "Rear Roll Center Height (in)": {
+            "category": "Rear Suspension", "min": 0.5, "max": 6.0, "pts": 8, "key": "sw_rrc",
+            "setter": lambda cfg, val: setattr(cfg.rear_suspension, "roll_center_height", val * INCH_TO_M)
+        },
+        "Rear Track Width (in)": {
+            "category": "Rear Suspension", "min": 42.0, "max": 54.0, "pts": 7, "key": "sw_rtw",
+            "setter": lambda cfg, val: setattr(cfg.rear_suspension, "track_width", val * INCH_TO_M)
+        },
+        "Rear Static Camber (deg)": {
+            "category": "Rear Suspension", "min": -4.0, "max": 1.0, "pts": 9, "key": "sw_rcamber",
+            "setter": lambda cfg, val: setattr(cfg.rear_suspension, "static_camber", np.deg2rad(val))
+        },
+        "Rear Static Toe (deg)": {
+            "category": "Rear Suspension", "min": -2.0, "max": 2.0, "pts": 9, "key": "sw_rtoe",
+            "setter": lambda cfg, val: setattr(cfg.rear_suspension, "static_toe", np.deg2rad(val))
+        },
+        "Rear Spring Motion Ratio": {
+            "category": "Rear Suspension", "min": 0.70, "max": 1.40, "pts": 8, "key": "sw_rsmr",
+            "setter": lambda cfg, val: setattr(cfg.rear_suspension, "spring_MR", val)
+        },
+        "Rear ARB Motion Ratio": {
+            "category": "Rear Suspension", "min": 0.0, "max": 1.30, "pts": 7, "key": "sw_ramr",
+            "setter": lambda cfg, val: setattr(cfg.rear_suspension, "arb_MR", val)
+        },
+        "Rear Unsprung Mass (lb)": {
+            "category": "Rear Suspension", "min": 6.0, "max": 20.0, "pts": 8, "key": "sw_rumass",
+            "setter": lambda cfg, val: setattr(cfg.rear_suspension, "unsprung_mass", val * LB_TO_KG)
+        },
+        "Rear Unsprung CG Height (in)": {
+            "category": "Rear Suspension", "min": 5.0, "max": 12.0, "pts": 8, "key": "sw_rucg",
+            "setter": lambda cfg, val: setattr(cfg.rear_suspension, "unsprung_cg_height", val * INCH_TO_M)
+        },
+        # Steering & Tires
+        "Ackermann Steering (%)": {
+            "category": "Steering & Tires", "min": 0.0, "max": 140.0, "pts": 8, "key": "sw_ack",
+            "setter": lambda cfg, val: setattr(cfg.steering, "ackermann_percent", val)
+        },
+        "Tire Inflation Pressure (psi)": {
+            "category": "Steering & Tires", "min": 8.0, "max": 16.0, "pts": 9, "key": "sw_tire_p",
+            "setter": lambda cfg, val: setattr(cfg.tire, "inflation_pressure", val * PSI_TO_PA)
+        },
+        "Tire Radial Stiffness (lb/in)": {
+            "category": "Steering & Tires", "min": 300.0, "max": 650.0, "pts": 8, "key": "sw_tire_k",
+            "setter": lambda cfg, val: setattr(cfg.tire, "tire_stiffness", val * LBF_PER_IN_TO_N_PER_M)
+        },
+    }
+
     with tab_sweep:
         st.subheader("1D Parameter Sensitivity Analysis")
-        sweep_var = st.selectbox(
-            "Select Parameter to Sweep",
-            [
-                "Vehicle Speed (mph)",
-                "Front Spring Rate (lb/in)",
-                "Rear Spring Rate (lb/in)",
-                "Front ARB Stiffness (lb/in)",
-                "Rear ARB Stiffness (lb/in)",
-                "Aero Downforce (Cl)",
-                "Aero Balance (CoP % Front)",
-                "Weight Distribution (% Front)",
-                "CG Height (in)",
-                "Front Roll Center Height (in)",
-                "Rear Roll Center Height (in)",
-                "Ackermann Steering (%)",
-            ],
-        )
 
+        col_cat, col_param = st.columns([1, 2])
+        categories = ["All", "Operating", "Mass & CG", "Aerodynamics", "Front Suspension", "Rear Suspension", "Steering & Tires"]
+        selected_cat = col_cat.selectbox("Filter Category", categories, index=0)
+
+        if selected_cat == "All":
+            param_options = list(SWEEP_SPECS.keys())
+        else:
+            param_options = [k for k, v in SWEEP_SPECS.items() if v["category"] == selected_cat]
+
+        sweep_var = col_param.selectbox("Select Parameter to Sweep", param_options)
+
+        spec = SWEEP_SPECS[sweep_var]
         sweep_cols = st.columns(3)
-        if sweep_var == "Vehicle Speed (mph)":
-            sw_min = sweep_cols[0].number_input("Min Speed (mph)", value=15.0)
-            sw_max = sweep_cols[1].number_input("Max Speed (mph)", value=55.0)
-            sw_pts = sweep_cols[2].number_input("Points", value=9, min_value=3, max_value=25)
-            sw_vals = np.linspace(sw_min, sw_max, int(sw_pts))
-            sweep_func = lambda cfg, val: (setattr(cfg.simulation, "velocity", val * MPH_TO_MS), setattr(cfg.simulation, "velocity_display", val))
-        elif sweep_var == "Front Spring Rate (lb/in)":
-            sw_min = sweep_cols[0].number_input("Min Front Spring (lb/in)", value=150.0)
-            sw_max = sweep_cols[1].number_input("Max Front Spring (lb/in)", value=600.0)
-            sw_pts = sweep_cols[2].number_input("Points", value=9, min_value=3, max_value=25)
-            sw_vals = np.linspace(sw_min, sw_max, int(sw_pts))
-            sweep_func = lambda cfg, val: setattr(cfg.front_suspension, "spring_rate", val * LBF_PER_IN_TO_N_PER_M)
-        elif sweep_var == "Rear Spring Rate (lb/in)":
-            sw_min = sweep_cols[0].number_input("Min Rear Spring (lb/in)", value=150.0)
-            sw_max = sweep_cols[1].number_input("Max Rear Spring (lb/in)", value=600.0)
-            sw_pts = sweep_cols[2].number_input("Points", value=9, min_value=3, max_value=25)
-            sw_vals = np.linspace(sw_min, sw_max, int(sw_pts))
-            sweep_func = lambda cfg, val: setattr(cfg.rear_suspension, "spring_rate", val * LBF_PER_IN_TO_N_PER_M)
-        elif sweep_var == "Front ARB Stiffness (lb/in)":
-            sw_min = sweep_cols[0].number_input("Min Front ARB (lb/in)", value=0.0)
-            sw_max = sweep_cols[1].number_input("Max Front ARB (lb/in)", value=400.0)
-            sw_pts = sweep_cols[2].number_input("Points", value=9, min_value=3, max_value=25)
-            sw_vals = np.linspace(sw_min, sw_max, int(sw_pts))
-            sweep_func = lambda cfg, val: setattr(cfg.front_suspension, "arb_stiffness", val * LBF_PER_IN_TO_N_PER_M)
-        elif sweep_var == "Rear ARB Stiffness (lb/in)":
-            sw_min = sweep_cols[0].number_input("Min Rear ARB (lb/in)", value=0.0)
-            sw_max = sweep_cols[1].number_input("Max Rear ARB (lb/in)", value=400.0)
-            sw_pts = sweep_cols[2].number_input("Points", value=9, min_value=3, max_value=25)
-            sw_vals = np.linspace(sw_min, sw_max, int(sw_pts))
-            sweep_func = lambda cfg, val: setattr(cfg.rear_suspension, "arb_stiffness", val * LBF_PER_IN_TO_N_PER_M)
-        elif sweep_var == "Aero Downforce (Cl)":
-            sw_min = sweep_cols[0].number_input("Min Cl", value=1.0)
-            sw_max = sweep_cols[1].number_input("Max Cl", value=5.5)
-            sw_pts = sweep_cols[2].number_input("Points", value=9, min_value=3, max_value=25)
-            sw_vals = np.linspace(sw_min, sw_max, int(sw_pts))
-            sweep_func = lambda cfg, val: setattr(cfg.aero, "Cl", val)
-        elif sweep_var == "Aero Balance (CoP % Front)":
-            sw_min = sweep_cols[0].number_input("Min CoP (%)", value=30.0)
-            sw_max = sweep_cols[1].number_input("Max CoP (%)", value=60.0)
-            sw_pts = sweep_cols[2].number_input("Points", value=9, min_value=3, max_value=25)
-            sw_vals = np.linspace(sw_min, sw_max, int(sw_pts))
-            sweep_func = lambda cfg, val: setattr(cfg.aero, "CoP", val)
-        elif sweep_var == "Weight Distribution (% Front)":
-            sw_min = sweep_cols[0].number_input("Min Front Weight (%)", value=42.0)
-            sw_max = sweep_cols[1].number_input("Max Front Weight (%)", value=55.0)
-            sw_pts = sweep_cols[2].number_input("Points", value=9, min_value=3, max_value=25)
-            sw_vals = np.linspace(sw_min, sw_max, int(sw_pts))
-            sweep_func = lambda cfg, val: setattr(cfg.mass, "x_loc_front", val / 100.0)
-        elif sweep_var == "CG Height (in)":
-            sw_min = sweep_cols[0].number_input("Min CG Height (in)", value=9.0)
-            sw_max = sweep_cols[1].number_input("Max CG Height (in)", value=16.0)
-            sw_pts = sweep_cols[2].number_input("Points", value=8, min_value=3, max_value=25)
-            sw_vals = np.linspace(sw_min, sw_max, int(sw_pts))
-            sweep_func = lambda cfg, val: setattr(cfg.mass, "cg_height", val * INCH_TO_M)
-        elif sweep_var == "Front Roll Center Height (in)":
-            sw_min = sweep_cols[0].number_input("Min Front RC (in)", value=1.0)
-            sw_max = sweep_cols[1].number_input("Max Front RC (in)", value=6.0)
-            sw_pts = sweep_cols[2].number_input("Points", value=8, min_value=3, max_value=25)
-            sw_vals = np.linspace(sw_min, sw_max, int(sw_pts))
-            sweep_func = lambda cfg, val: setattr(cfg.front_suspension, "roll_center_height", val * INCH_TO_M)
-        elif sweep_var == "Rear Roll Center Height (in)":
-            sw_min = sweep_cols[0].number_input("Min Rear RC (in)", value=1.0)
-            sw_max = sweep_cols[1].number_input("Max Rear RC (in)", value=6.0)
-            sw_pts = sweep_cols[2].number_input("Points", value=8, min_value=3, max_value=25)
-            sw_vals = np.linspace(sw_min, sw_max, int(sw_pts))
-            sweep_func = lambda cfg, val: setattr(cfg.rear_suspension, "roll_center_height", val * INCH_TO_M)
-        else:  # Ackermann
-            sw_min = sweep_cols[0].number_input("Min Ackermann (%)", value=0.0)
-            sw_max = sweep_cols[1].number_input("Max Ackermann (%)", value=130.0)
-            sw_pts = sweep_cols[2].number_input("Points", value=8, min_value=3, max_value=25)
-            sw_vals = np.linspace(sw_min, sw_max, int(sw_pts))
-            sweep_func = lambda cfg, val: setattr(cfg.steering, "ackermann_percent", val)
+        sw_min = sweep_cols[0].number_input(f"Min ({sweep_var.split('(')[-1].replace(')', '') if '(' in sweep_var else ''})", value=float(spec["min"]), key=f"{spec['key']}_min")
+        sw_max = sweep_cols[1].number_input(f"Max ({sweep_var.split('(')[-1].replace(')', '') if '(' in sweep_var else ''})", value=float(spec["max"]), key=f"{spec['key']}_max")
+        sw_pts = sweep_cols[2].number_input("Points", value=int(spec["pts"]), min_value=3, max_value=35, key=f"{spec['key']}_pts")
+
+        sw_vals = np.linspace(sw_min, sw_max, int(sw_pts))
+        sweep_func = spec["setter"]
 
         run_sweep_btn = st.button("Run Sensitivity Sweep", type="primary")
 

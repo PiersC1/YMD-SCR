@@ -56,36 +56,60 @@ class YMDVisualizer:
         # 1. Plot lines of constant Beta (varying Delta)
         for i, beta in enumerate(beta_deg):
             is_zero = np.isclose(beta, 0.0, atol=1e-3)
-            color = "#990000" if is_zero else cmap_beta(i)
-            lw = 2.5 if is_zero else 1.2
-            alpha = 1.0 if is_zero else 0.65
-            label = "Beta = 0 deg" if is_zero else None
-            ax.plot(
-                ay_g[i, :],
-                mz[i, :],
-                color=color,
-                linewidth=lw,
-                alpha=alpha,
-                linestyle="-",
-                label=label,
-            )
+            if is_zero and result.beta0_hires_ay_g is not None:
+                ax.plot(
+                    result.beta0_hires_ay_g,
+                    result.beta0_hires_mz,
+                    color="#990000",
+                    linewidth=2.5,
+                    alpha=1.0,
+                    linestyle="-",
+                    label="Beta = 0 deg (Hi-Res)",
+                    zorder=5,
+                )
+            else:
+                color = "#990000" if is_zero else cmap_beta(i)
+                lw = 2.5 if is_zero else 1.2
+                alpha = 1.0 if is_zero else 0.65
+                label = "Beta = 0 deg" if (is_zero and result.beta0_hires_ay_g is None) else None
+                ax.plot(
+                    ay_g[i, :],
+                    mz[i, :],
+                    color=color,
+                    linewidth=lw,
+                    alpha=alpha,
+                    linestyle="-",
+                    label=label,
+                )
 
         # 2. Plot lines of constant Delta (varying Beta)
         for j, delta in enumerate(delta_deg):
             is_zero = np.isclose(delta, 0.0, atol=1e-3)
-            color = "#D4A017" if is_zero else cmap_delta(j)
-            lw = 2.5 if is_zero else 1.0
-            alpha = 1.0 if is_zero else 0.55
-            label = "Delta = 0 deg" if is_zero else None
-            ax.plot(
-                ay_g[:, j],
-                mz[:, j],
-                color=color,
-                linewidth=lw,
-                alpha=alpha,
-                linestyle="--",
-                label=label,
-            )
+            if is_zero and result.delta0_hires_ay_g is not None:
+                ax.plot(
+                    result.delta0_hires_ay_g,
+                    result.delta0_hires_mz,
+                    color="#D4A017",
+                    linewidth=2.5,
+                    alpha=1.0,
+                    linestyle="--",
+                    label="Delta = 0 deg (Hi-Res)",
+                    zorder=5,
+                )
+            else:
+                color = "#D4A017" if is_zero else cmap_delta(j)
+                lw = 2.5 if is_zero else 1.0
+                alpha = 1.0 if is_zero else 0.55
+                label = "Delta = 0 deg" if (is_zero and result.delta0_hires_ay_g is None) else None
+                ax.plot(
+                    ay_g[:, j],
+                    mz[:, j],
+                    color=color,
+                    linewidth=lw,
+                    alpha=alpha,
+                    linestyle="--",
+                    label=label,
+                )
 
         # 3. Annotate KPIs
         # Steady state grip limit
@@ -182,58 +206,102 @@ class YMDVisualizer:
         # 1. Constant Beta curves (varying Delta)
         for i, beta in enumerate(beta_deg):
             is_zero = np.isclose(beta, 0.0, atol=1e-3)
-            hover_text = [
-                f"Beta (Chassis Slip): {beta:.1f}°<br>"
-                f"Delta (Steer): {delta_deg[j]:.1f}°<br>"
-                f"Ay: {ay_g[i, j]:.3f} g ({ay_g[i, j]*9.81:.2f} m/s²)<br>"
-                f"Mz: {mz[i, j]:.1f} N*m<br>"
-                f"FL Load: {result.point_solutions[i][j].corner_loads.FL:.0f} N<br>"
-                f"FR Load: {result.point_solutions[i][j].corner_loads.FR:.0f} N"
-                for j in range(len(delta_deg))
-            ]
-
-            line_color = "#990000" if is_zero else "rgba(92, 92, 92, 0.35)"
-            line_width = 3.5 if is_zero else 1.2
-
-            fig.add_trace(
-                go.Scatter(
-                    x=ay_g[i, :],
-                    y=mz[i, :],
-                    mode="lines",
-                    name=f"β = {beta:.1f}°" if (is_zero or i % 3 == 0) else "",
-                    line=dict(color=line_color, width=line_width),
-                    hoverinfo="text",
-                    text=hover_text,
-                    showlegend=bool(is_zero or (i % 3 == 0)),
+            if is_zero and result.beta0_hires_ay_g is not None:
+                d_hires = result.beta0_hires_delta_deg
+                hover_text_hires = [
+                    f"Beta (Chassis Slip): 0.0°<br>"
+                    f"Delta (Steer): {d_hires[k]:.2f}°<br>"
+                    f"Ay: {result.beta0_hires_ay_g[k]:.3f} g<br>"
+                    f"Mz: {result.beta0_hires_mz[k]:.1f} N*m"
+                    for k in range(len(d_hires))
+                ]
+                fig.add_trace(
+                    go.Scatter(
+                        x=result.beta0_hires_ay_g,
+                        y=result.beta0_hires_mz,
+                        mode="lines",
+                        name="β = 0.0° (Hi-Res)",
+                        line=dict(color="#990000", width=3.5),
+                        hoverinfo="text",
+                        text=hover_text_hires,
+                        showlegend=True,
+                    )
                 )
-            )
+            else:
+                hover_text = [
+                    f"Beta (Chassis Slip): {beta:.1f}°<br>"
+                    f"Delta (Steer): {delta_deg[j]:.1f}°<br>"
+                    f"Ay: {ay_g[i, j]:.3f} g ({ay_g[i, j]*9.81:.2f} m/s²)<br>"
+                    f"Mz: {mz[i, j]:.1f} N*m<br>"
+                    f"FL Load: {result.point_solutions[i][j].corner_loads.FL:.0f} N<br>"
+                    f"FR Load: {result.point_solutions[i][j].corner_loads.FR:.0f} N"
+                    for j in range(len(delta_deg))
+                ]
+
+                line_color = "#990000" if is_zero else "rgba(92, 92, 92, 0.35)"
+                line_width = 3.5 if is_zero else 1.2
+
+                fig.add_trace(
+                    go.Scatter(
+                        x=ay_g[i, :],
+                        y=mz[i, :],
+                        mode="lines",
+                        name=f"β = {beta:.1f}°" if (is_zero or i % 3 == 0) else "",
+                        line=dict(color=line_color, width=line_width),
+                        hoverinfo="text",
+                        text=hover_text,
+                        showlegend=bool(is_zero or (i % 3 == 0)),
+                    )
+                )
 
         # 2. Constant Delta curves (varying Beta)
         for j, delta in enumerate(delta_deg):
             is_zero = np.isclose(delta, 0.0, atol=1e-3)
-            hover_text = [
-                f"Delta (Steer): {delta:.1f}°<br>"
-                f"Beta (Chassis Slip): {beta_deg[i]:.1f}°<br>"
-                f"Ay: {ay_g[i, j]:.3f} g<br>"
-                f"Mz: {mz[i, j]:.1f} N*m"
-                for i in range(len(beta_deg))
-            ]
-
-            line_color = "#D4A017" if is_zero else "rgba(153, 0, 0, 0.30)"
-            line_width = 3.5 if is_zero else 1.2
-
-            fig.add_trace(
-                go.Scatter(
-                    x=ay_g[:, j],
-                    y=mz[:, j],
-                    mode="lines",
-                    name=f"δ = {delta:.1f}°" if (is_zero or j % 3 == 0) else "",
-                    line=dict(color=line_color, width=line_width, dash="dash" if not is_zero else "solid"),
-                    hoverinfo="text",
-                    text=hover_text,
-                    showlegend=bool(is_zero or (j % 3 == 0)),
+            if is_zero and result.delta0_hires_ay_g is not None:
+                b_hires = result.delta0_hires_beta_deg
+                hover_text_hires = [
+                    f"Delta (Steer): 0.0°<br>"
+                    f"Beta (Chassis Slip): {b_hires[k]:.2f}°<br>"
+                    f"Ay: {result.delta0_hires_ay_g[k]:.3f} g<br>"
+                    f"Mz: {result.delta0_hires_mz[k]:.1f} N*m"
+                    for k in range(len(b_hires))
+                ]
+                fig.add_trace(
+                    go.Scatter(
+                        x=result.delta0_hires_ay_g,
+                        y=result.delta0_hires_mz,
+                        mode="lines",
+                        name="δ = 0.0° (Hi-Res)",
+                        line=dict(color="#D4A017", width=3.5, dash="dash"),
+                        hoverinfo="text",
+                        text=hover_text_hires,
+                        showlegend=True,
+                    )
                 )
-            )
+            else:
+                hover_text = [
+                    f"Delta (Steer): {delta:.1f}°<br>"
+                    f"Beta (Chassis Slip): {beta_deg[i]:.1f}°<br>"
+                    f"Ay: {ay_g[i, j]:.3f} g<br>"
+                    f"Mz: {mz[i, j]:.1f} N*m"
+                    for i in range(len(beta_deg))
+                ]
+
+                line_color = "#D4A017" if is_zero else "rgba(153, 0, 0, 0.30)"
+                line_width = 3.5 if is_zero else 1.2
+
+                fig.add_trace(
+                    go.Scatter(
+                        x=ay_g[:, j],
+                        y=mz[:, j],
+                        mode="lines",
+                        name=f"δ = {delta:.1f}°" if (is_zero or j % 3 == 0) else "",
+                        line=dict(color=line_color, width=line_width, dash="dash" if not is_zero else "solid"),
+                        hoverinfo="text",
+                        text=hover_text,
+                        showlegend=bool(is_zero or (j % 3 == 0)),
+                    )
+                )
 
         # 3. Optional Comparison Overlay
         if compare_result is not None:

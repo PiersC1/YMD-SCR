@@ -133,13 +133,27 @@ class KPICalculator:
     def compute_control_authority(self, solver=None) -> float:
         """
         Calculates Control Authority = dMz / dDelta [N*m/deg] along beta = 0 at delta = 0.
-        Uses high-precision central difference micro-solves if solver is provided.
+        Uses high-precision central difference micro-solves if solver is provided,
+        or dense high-resolution zero-angle isoline data if available.
         """
         if solver is not None:
             delta_eps = np.deg2rad(0.5)
             pt_pos = solver.solve_point(beta=0.0, delta=+delta_eps, velocity=self.result.velocity_ms)
             pt_neg = solver.solve_point(beta=0.0, delta=-delta_eps, velocity=self.result.velocity_ms)
             return float((pt_pos.mz - pt_neg.mz) / (2.0 * np.rad2deg(delta_eps)))
+
+        if (
+            self.result.beta0_hires_delta_deg is not None
+            and self.result.beta0_hires_mz is not None
+        ):
+            d_vals = self.result.beta0_hires_delta_deg
+            mz_vals = self.result.beta0_hires_mz
+            d0_idx = np.argmin(np.abs(d_vals))
+            if 0 < d0_idx < len(d_vals) - 1:
+                return float((mz_vals[d0_idx + 1] - mz_vals[d0_idx - 1]) / (d_vals[d0_idx + 1] - d_vals[d0_idx - 1]))
+            else:
+                grad = np.gradient(mz_vals, d_vals)
+                return float(grad[d0_idx])
 
         beta_vals = self.result.beta_grid_deg[:, 0]
         delta_vals = self.result.delta_grid_deg[0, :]
@@ -160,13 +174,27 @@ class KPICalculator:
     def compute_stability(self, solver=None) -> float:
         """
         Calculates Yaw Stability = dMz / dBeta [N*m/deg] along delta = 0 at beta = 0.
-        Uses high-precision central difference micro-solves if solver is provided.
+        Uses high-precision central difference micro-solves if solver is provided,
+        or dense high-resolution zero-angle isoline data if available.
         """
         if solver is not None:
             beta_eps = np.deg2rad(0.5)
             pt_pos = solver.solve_point(beta=+beta_eps, delta=0.0, velocity=self.result.velocity_ms)
             pt_neg = solver.solve_point(beta=-beta_eps, delta=0.0, velocity=self.result.velocity_ms)
             return float((pt_pos.mz - pt_neg.mz) / (2.0 * np.rad2deg(beta_eps)))
+
+        if (
+            self.result.delta0_hires_beta_deg is not None
+            and self.result.delta0_hires_mz is not None
+        ):
+            b_vals = self.result.delta0_hires_beta_deg
+            mz_vals = self.result.delta0_hires_mz
+            b0_idx = np.argmin(np.abs(b_vals))
+            if 0 < b0_idx < len(b_vals) - 1:
+                return float((mz_vals[b0_idx + 1] - mz_vals[b0_idx - 1]) / (b_vals[b0_idx + 1] - b_vals[b0_idx - 1]))
+            else:
+                grad = np.gradient(mz_vals, b_vals)
+                return float(grad[b0_idx])
 
         beta_vals = self.result.beta_grid_deg[:, 0]
         delta_vals = self.result.delta_grid_deg[0, :]

@@ -92,41 +92,36 @@ def run_sweep(args):
     points = args.points
     values = np.linspace(val_min, val_max, points)
 
-    print(f"[*] Running 1D parameter sweep for '{param}' across [{val_min}, {val_max}] ({points} points)...")
+    from src.config import INCH_TO_M, LB_TO_KG, PSI_TO_PA
 
-    if param in ["velocity", "speed"]:
-        sweep_res = solver.run_1d_sweep(
-            lambda cfg, val: setattr(cfg.simulation, "velocity", val * MPH_TO_MS),
-            values,
-            param_name="Velocity (mph)",
-        )
-    elif param in ["front_arb", "farb"]:
-        sweep_res = solver.run_1d_sweep(
-            lambda cfg, val: setattr(cfg.front_suspension, "arb_stiffness", val * LBF_PER_IN_TO_N_PER_M),
-            values,
-            param_name="Front ARB Stiffness (lb/in)",
-        )
-    elif param in ["cl", "aero_cl"]:
-        sweep_res = solver.run_1d_sweep(
-            lambda cfg, val: setattr(cfg.aero, "Cl", val),
-            values,
-            param_name="Aero Cl",
-        )
-    elif param in ["cop", "aero_cop"]:
-        sweep_res = solver.run_1d_sweep(
-            lambda cfg, val: setattr(cfg.aero, "CoP", val),
-            values,
-            param_name="Aero CoP (% front)",
-        )
-    elif param in ["cg_front", "mass_distribution"]:
-        sweep_res = solver.run_1d_sweep(
-            lambda cfg, val: setattr(cfg.mass, "x_loc_front", val / 100.0 if val > 1 else val),
-            values,
-            param_name="Weight Distribution (% Front)",
-        )
-    else:
-        print(f"[-] Unknown sweep parameter: {param}")
+    CLI_SWEEPS = {
+        "velocity": ("Velocity (mph)", lambda cfg, val: (setattr(cfg.simulation, "velocity", val * MPH_TO_MS), setattr(cfg.simulation, "velocity_display", val))),
+        "speed": ("Velocity (mph)", lambda cfg, val: (setattr(cfg.simulation, "velocity", val * MPH_TO_MS), setattr(cfg.simulation, "velocity_display", val))),
+        "front_spring": ("Front Spring Rate (lb/in)", lambda cfg, val: setattr(cfg.front_suspension, "spring_rate", val * LBF_PER_IN_TO_N_PER_M)),
+        "rear_spring": ("Rear Spring Rate (lb/in)", lambda cfg, val: setattr(cfg.rear_suspension, "spring_rate", val * LBF_PER_IN_TO_N_PER_M)),
+        "front_arb": ("Front ARB Stiffness (lb/in)", lambda cfg, val: setattr(cfg.front_suspension, "arb_stiffness", val * LBF_PER_IN_TO_N_PER_M)),
+        "rear_arb": ("Rear ARB Stiffness (lb/in)", lambda cfg, val: setattr(cfg.rear_suspension, "arb_stiffness", val * LBF_PER_IN_TO_N_PER_M)),
+        "cl": ("Aero Cl", lambda cfg, val: setattr(cfg.aero, "Cl", val)),
+        "cop": ("Aero CoP (% Front)", lambda cfg, val: setattr(cfg.aero, "CoP", val)),
+        "cg_front": ("Weight Distribution (% Front)", lambda cfg, val: setattr(cfg.mass, "x_loc_front", val / 100.0 if val > 1 else val)),
+        "cg_height": ("CG Height (in)", lambda cfg, val: setattr(cfg.mass, "cg_height", val * INCH_TO_M)),
+        "front_rc": ("Front Roll Center (in)", lambda cfg, val: setattr(cfg.front_suspension, "roll_center_height", val * INCH_TO_M)),
+        "rear_rc": ("Rear Roll Center (in)", lambda cfg, val: setattr(cfg.rear_suspension, "roll_center_height", val * INCH_TO_M)),
+        "front_camber": ("Front Static Camber (deg)", lambda cfg, val: setattr(cfg.front_suspension, "static_camber", np.deg2rad(val))),
+        "rear_camber": ("Rear Static Camber (deg)", lambda cfg, val: setattr(cfg.rear_suspension, "static_camber", np.deg2rad(val))),
+        "ackermann": ("Ackermann Steering (%)", lambda cfg, val: setattr(cfg.steering, "ackermann_percent", val)),
+        "tire_pressure": ("Tire Pressure (psi)", lambda cfg, val: setattr(cfg.tire, "inflation_pressure", val * PSI_TO_PA)),
+        "wheelbase": ("Wheelbase (in)", lambda cfg, val: setattr(cfg.dimensions, "wheelbase", val * INCH_TO_M)),
+        "dry_mass": ("Dry Mass (lb)", lambda cfg, val: (setattr(cfg.mass, "dry_mass", val * LB_TO_KG), setattr(cfg.mass, "total_mass", val * LB_TO_KG + cfg.mass.driver_mass + cfg.mass.fuel_mass))),
+    }
+
+    if param not in CLI_SWEEPS:
+        print(f"[-] Unknown sweep parameter: '{param}'.")
+        print(f"[*] Available parameters: {', '.join(sorted(CLI_SWEEPS.keys()))}")
         sys.exit(1)
+
+    display_name, setter = CLI_SWEEPS[param]
+    sweep_res = solver.run_1d_sweep(setter, values, param_name=display_name)
 
     print("\n" + "=" * 70)
     print(f" 1D SWEEP SUMMARY: {sweep_res.param_names[0]}")
